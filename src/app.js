@@ -61,24 +61,6 @@ app.use('/api/v1/clinic', clinicRoutes);
 app.use('/api/v1/slots', slotRoutes);
 app.use('/api/v1/doctors', doctorRoutes);
 
-// ── 404 handler (must be LAST) ──
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Route ${req.originalUrl} not found`,
-  });
-});
-
-// ── Error handler ──
-app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  res.status(500).json({
-    success: false,
-    message: 'Internal Server Error',
-    error: err.message,
-  });
-});
-
 app.post('/api/v1/system/trigger-cron', async (req, res) => {
   try {
     const secret = req.headers['x-cron-secret'];
@@ -106,5 +88,24 @@ app.post('/api/v1/system/trigger-cron', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// ── 404 handler (must be LAST) ──
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.originalUrl} not found`,
+  });
+});
+
+// ── Error handler ──
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({
+    success: false,
+    message: 'Internal Server Error',
+    error: err.message,
+  });
+});
+
 
 module.exports = app;
