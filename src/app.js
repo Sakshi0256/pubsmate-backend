@@ -49,6 +49,17 @@ app.use((err, req, res, next) => {
   });
 });
 
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error('DB connection failed for request:', req.url, err);
+    res.status(500).json({ success: false, message: 'Database connection failed' });
+  }
+});
+
+
 app.get('/api/v1/test-db', async (req, res) => {
   try {
     const mongoose = require('mongoose');
