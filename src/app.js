@@ -79,4 +79,32 @@ app.use((err, req, res, next) => {
   });
 });
 
+app.post('/api/v1/system/trigger-cron', async (req, res) => {
+  try {
+    const secret = req.headers['x-cron-secret'];
+    if (secret !== process.env.CRON_SECRET) {
+      return res.status(403).json({ success: false, message: 'Unauthorized' });
+    }
+
+    // Same logic as your cron job (next day slots)
+    const User = require('./models/User');
+    const generateSlotsForDoctor = require('./utils/generateSlotsForDoctor');
+    const doctors = await User.find({ role: 'doctor', isActive: true });
+
+    let total = 0;
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const slotDate = tomorrow.toISOString().split('T')[0];
+
+    for (const doctor of doctors) {
+      const result = await generateSlotsForDoctor(doctor._id, slotDate);
+      total += result.created || 0;
+    }
+
+    res.json({ success: true, message: `Generated ${total} slots for ${slotDate}` });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 module.exports = app;
