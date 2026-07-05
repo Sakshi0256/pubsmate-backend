@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const Slot = require('../models/Slot');
 const generateToken = require('../utils/generateToken');
 const generateSlotsForDoctor = require('../utils/generateSlotsForDoctor'); // ← Import this
+const connectDB = require('../config/db');
 
 // ── SIGNUP ────────────────────────────────────────────────────────────────────
 // const signup = async (req, res) => {
