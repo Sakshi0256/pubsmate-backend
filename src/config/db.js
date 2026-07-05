@@ -12,10 +12,20 @@ async function connectDB() {
   if (!cached.promise) {
     const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
     if (!uri) {
-      throw new Error('MongoDB URI is not defined in environment variables');
+      throw new Error('MongoDB URI is not defined');
     }
-    // ✅ Remove deprecated options – just pass URI
-    cached.promise = mongoose.connect(uri).then(m => m);
+    const opts = {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      maxPoolSize: 1,
+      family: 4,
+    };
+    cached.promise = mongoose.connect(uri, opts)
+      .then(m => m)
+      .catch(err => {
+        cached.promise = null; // allow retry
+        throw err;
+      });
   }
   cached.conn = await cached.promise;
   return cached.conn;
