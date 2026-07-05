@@ -49,4 +49,18 @@ app.use((err, req, res, next) => {
   });
 });
 
+app.get('/api/v1/test-db', async (req, res) => {
+  try {
+    const mongoose = require('mongoose');
+    const state = mongoose.connection.readyState;
+    res.json({ 
+      state, 
+      message: state === 1 ? 'Connected ✅' : 'Not connected ❌',
+      uri: process.env.MONGODB_URI ? 'Set' : 'Not Set'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = app;

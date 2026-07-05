@@ -269,6 +269,7 @@ const signup = async (req, res) => {
 // ── LOGIN ─────────────────────────────────────────────────────────────────────
 const login = async (req, res) => {
   try {
+    await connectDB();
     const { email, password, role } = req.body;
 
     if (!email || !password) {
