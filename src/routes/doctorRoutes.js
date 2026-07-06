@@ -52,6 +52,7 @@ const {
   getDoctorDashboard,
   updateDoctorProfile,
 } = require('../controllers/doctorController');
+router.get('/', protect, authorizeRoles('clinic', 'doctor'), getDoctors);
 
 // ── ✅ FRONTEND KE PURANE PATHS ──
 router.get('/appointments', protect, authorizeRoles('doctor'), getDoctorAppointments);
@@ -76,8 +77,7 @@ router.put('/appointments/:id/complete', protect, authorizeRoles('doctor', 'clin
 
 router.patch('/profile/:id', protect, authorizeRoles('doctor'), updateDoctorProfile);
 
-// ── PUBLIC ROUTES ──
-router.get('/', getDoctors);
+// ── PUBLIC/SPECIFIC ROUTES ──
 router.get('/:id', getDoctorById);
 router.get('/:doctorId/slots', getDoctorSlots);
 
