@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
-
 // ── Import DB connection ──
 const connectDB = require('./config/db');
 
@@ -10,6 +9,7 @@ const appointmentRoutes = require('./routes/appointmentRoutes');
 const clinicRoutes = require('./routes/clinicRoutes');
 const slotRoutes = require('./routes/slotRoutes');
 const doctorRoutes = require('./routes/doctorRoutes');
+const superAdminRoutes = require('./routes/superAdminRoute');
 
 const app = express();
 
@@ -60,6 +60,7 @@ app.use('/api/v1/appointments', appointmentRoutes);
 app.use('/api/v1/clinic', clinicRoutes);
 app.use('/api/v1/slots', slotRoutes);
 app.use('/api/v1/doctors', doctorRoutes);
+app.use('/api/v1/superadmin', superAdminRoutes);
 
 app.post('/api/v1/system/trigger-cron', async (req, res) => {
   try {
