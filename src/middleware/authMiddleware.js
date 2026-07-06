@@ -1,36 +1,31 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Admin = require('../models/Admin');
 
 const protect = async (req, res, next) => {
   try {
     let token;
 
-    // Check authorization header
-    if (
-      req.headers.authorization &&
-      req.headers.authorization.startsWith('Bearer')
-    ) {
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
     }
 
     if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'Not authorized, no token',
-      });
+      return res.status(401).json({ success: false, message: 'Not authorized, no token' });
     }
 
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret_key');
+
+    // ✅ Phele User collection mein dhoondo
+    let user = await User.findById(decoded.id || decoded.userId).select('-password');
     
-    // Get user from token
-    const user = await User.findById(decoded.id || decoded.userId).select('-password');
+    // ✅ Agar nahi mila, toh Admin collection mein dhoondo
+    if (!user) {
+      user = await Admin.findById(decoded.id || decoded.userId).select('-password');
+    }
     
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: 'User not found',
-      });
+      return res.status(401).json({ success: false, message: 'User not found' });
     }
 
     // Attach user to request
@@ -45,25 +40,7 @@ const protect = async (req, res, next) => {
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);
-    
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid token',
-      });
-    }
-    
-    if (error.name === 'TokenExpiredError') {
-      return res.status(401).json({
-        success: false,
-        message: 'Token expired',
-      });
-    }
-
-    return res.status(401).json({
-      success: false,
-      message: 'Not authorized',
-    });
+    return res.status(401).json({ success: false, message: 'Not authorized' });
   }
 };
 

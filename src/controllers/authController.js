@@ -412,7 +412,7 @@ const login = async (req, res) => {
       });
     }
 
-    const token = generateToken(user);
+   const token = generateToken(user, isSuperAdmin ? 'admin' : 'user');
 
     // ✅ Build User Data object smartly (Superadmin ko baki fields nahi chahiye hote)
     const userData = {
