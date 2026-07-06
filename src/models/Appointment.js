@@ -9,12 +9,12 @@ const appointmentSchema = new mongoose.Schema(
       ref: 'User',
       required: false,
     },
-    
-doctorId: {
-  type: mongoose.Schema.Types.ObjectId,
-  ref: 'User',
-  required: false,
-},
+
+    doctorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: false,
+    },
 
     doctor: {
       type: mongoose.Schema.Types.ObjectId,
@@ -32,9 +32,16 @@ doctorId: {
       required: true,
     },
 
-     slotDate: {  // ⬅️ ADD THIS FIELD
+    slotDate: {  // ⬅️ ADD THIS FIELD
       type: String, // YYYY-MM-DD format
       required: true,
+    },
+
+
+    clinicId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
     },
 
     issue: {

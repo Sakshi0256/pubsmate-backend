@@ -201,6 +201,7 @@ const signup = async (req, res) => {
       consultationFee: consultationFee || 0,
       hospitalName: hospitalName || '',
       about: about || '',
+      clinicId: req.user ? req.user.userId || req.user._id : null,
     };
 
     // If role is doctor, add timing fields
@@ -419,6 +420,7 @@ const login = async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+     clinicId: user.clinicId || null,
     };
 
     // Agar normal user (doctor/clinic) hai, toh baki fields bhi bhej do

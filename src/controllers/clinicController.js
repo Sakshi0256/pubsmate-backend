@@ -2,58 +2,59 @@ const Appointment = require('../models/Appointment');
 const Slot = require('../models/Slot');
 const User = require('../models/User'); 
 
+// ── GET DASHBOARD STATS ─────────────────────────────────────────────────────
 const getDashboardStats = async (req, res) => {
   try {
-    const totalAppointments =
-      await Appointment.countDocuments();
-    const pendingAppointments =
-      await Appointment.countDocuments({
+    // 🪄 MAGIC FILTER: Kis clinic ne login kiya hai?
+    const clinicId = req.user.userId || req.user._id;
+
+    // Har query me clinicId pass kar diya!
+    const totalAppointments = await Appointment.countDocuments({ clinicId });
+    
+    const pendingAppointments = await Appointment.countDocuments({
+        clinicId, 
         status: 'pending',
-      });
+    });
 
-    const completedAppointments =
-      await Appointment.countDocuments({
+    const completedAppointments = await Appointment.countDocuments({
+        clinicId, 
         status: 'completed',
-      });
+    });
 
-   const rejectedAppointments =
-      await Appointment.countDocuments({
+    const rejectedAppointments = await Appointment.countDocuments({
+        clinicId, 
         status: 'rejected',
-      });
-console.log('STATS =>', {
-  totalAppointments,
-  pendingAppointments,
-  completedAppointments,
-  rejectedAppointments,
-});
+    });
+
+    console.log('STATS =>', { totalAppointments, pendingAppointments, completedAppointments, rejectedAppointments });
+    
     res.status(200).json({
       success: true,
       stats: {
         totalAppointments,
         pendingAppointments,
         completedAppointments,
-       rejectedAppointments,
+        rejectedAppointments,
       },
-      
     });
 
   } catch (error) {
     console.log(error);
-
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-    });
+    res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
 
+// ── GET ALL APPOINTMENTS ────────────────────────────────────────────────────
 const getAllAppointments = async (req, res) => {
   try {
     const { dateFrom, dateTo } = req.query;
-    const query = {};
+    
+    // 🪄 MAGIC FILTER: Sirf is clinic ke appointments lao
+    const clinicId = req.user.userId || req.user._id;
+    const query = { clinicId }; // ⬅️ Sabse bada game-changer ye line hai
 
     if (dateFrom && dateTo) {
-      query.slotDate = {  // ⬅️ Use slotDate instead of createdAt
+      query.slotDate = {
         $gte: dateFrom,
         $lte: dateTo,
       };
@@ -65,10 +66,8 @@ const getAllAppointments = async (req, res) => {
       .populate('doctor', 'name email')
       .sort({ createdAt: -1 });
 
-    // Format appointments to include date field
     const formattedAppointments = appointments.map(app => {
       const appObj = app.toObject();
-      // Extract date from createdAt or use slotDate if available
       const dateObj = app.slotDate || app.createdAt;
       return {
         ...appObj,
@@ -83,126 +82,69 @@ const getAllAppointments = async (req, res) => {
 
   } catch (error) {
     console.log(error);
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-    });
+    res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
 
-// const getAllAppointments = async (req, res) => {
-//   try {
-
-//     const appointments = await Appointment.find()
-//       .populate('patient', 'name email')
-//       .populate('doctor', 'name email')
-//       .sort({ createdAt: -1 });
-
-//     res.status(200).json({
-//       success: true,
-//       appointments,
-//     });
-
-//   } catch (error) {
-
-//     console.log(error);
-
-//     res.status(500).json({
-//       success: false,
-//       message: 'Server Error',
-//     });
-
-//   }
-// };
+// ── CREATE APPOINTMENT ──────────────────────────────────────────────────────
 const createAppointment = async (req, res) => {
   try {
-
     console.log('BODY =>', req.body);
+    const { patientName, mobile, doctorName, doctorId, slotTime, slotDate } = req.body;
 
-    const {
-      patientName,
-      mobile,
-      doctorName,
-      doctorId,
-      slotTime,
-       slotDate,
-    } = req.body;
+    // 🪄 MAGIC FILTER: Jis clinic ke dashboard se ye ban raha hai, uski ID
+    const clinicId = req.user.userId || req.user._id;
 
-
-     const slot = await Slot.findOne({
+    const slot = await Slot.findOne({
       doctor: doctorId,
       slotTime: slotTime,
       status: 'available',
     });
 
-    const appointment =
-      await Appointment.create({
+    const appointment = await Appointment.create({
         patientName,
         mobile,
-
         doctor: doctorId,
         doctorId: doctorId,
-
         doctorName,
-
         slotTime,
         slotDate: slotDate || slot.slotDate, 
+        clinicId, // ⬅️ YAHAN CLINIC KI ID SAVE HO RAHI HAI
         status: 'pending',
-      });
+    });
 
-    console.log(
-      'CREATED =>',
-      appointment,
-    );
+    console.log('CREATED =>', appointment);
 
     await Slot.findOneAndUpdate(
-      {
-        doctor: doctorId,
-        slotTime,
-        status: 'available',
-      },
-      {
-        status: 'booked',
-      },
+      { doctor: doctorId, slotTime, status: 'available' },
+      { status: 'booked' },
     );
 
     res.status(201).json({
       success: true,
-      message:
-        'Appointment created successfully',
+      message: 'Appointment created successfully',
       appointment,
     });
 
   } catch (error) {
-
     console.log(error);
-
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-    });
-
+    res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
 
 // ── GET CLINIC PROFILE ──────────────────────────────────────────────────────
 const getClinicProfile = async (req, res) => {
   try {
-    const clinicId = req.user.userId;
+    const clinicId = req.user.userId || req.user._id;
     
-    const clinic = await User.findById(clinicId)
-      .select('-password')
-      .lean();
+    const clinic = await User.findById(clinicId).select('-password').lean();
 
     if (!clinic || clinic.role !== 'clinic') {
-      return res.status(404).json({
-        success: false,
-        message: 'Clinic not found',
-      });
+      return res.status(404).json({ success: false, message: 'Clinic not found' });
     }
 
-    // Get doctors count
-    const doctors = await User.find({ role: 'doctor', isActive: true });
+    // 🪄 MAGIC FILTER: Sirf IS clinic ke doctors count karo
+    const doctors = await User.find({ role: 'doctor', clinicId: clinicId, isActive: true });
     const totalDoctors = doctors.length;
 
     res.status(200).json({
@@ -222,56 +164,31 @@ const getClinicProfile = async (req, res) => {
 
   } catch (error) {
     console.log('Get clinic profile error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-    });
+    res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
 
 // ── UPDATE CLINIC PROFILE ──────────────────────────────────────────────────
 const updateClinicProfile = async (req, res) => {
   try {
-    const clinicId = req.user.userId;
-    const {
-      name,
-      phone,
-      address,
-      about,
-      hospitalName,
-    } = req.body;
+    const clinicId = req.user.userId || req.user._id;
+    const { name, phone, address, about, hospitalName } = req.body;
 
     const clinic = await User.findByIdAndUpdate(
       clinicId,
-      {
-        name,
-        phone,
-        address,
-        about,
-        hospitalName,
-      },
+      { name, phone, address, about, hospitalName },
       { new: true, runValidators: true }
     ).select('-password');
 
     if (!clinic) {
-      return res.status(404).json({
-        success: false,
-        message: 'Clinic not found',
-      });
+      return res.status(404).json({ success: false, message: 'Clinic not found' });
     }
 
-    res.status(200).json({
-      success: true,
-      message: 'Profile updated successfully',
-      clinic,
-    });
+    res.status(200).json({ success: true, message: 'Profile updated successfully', clinic });
 
   } catch (error) {
     console.log('Update clinic profile error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-    });
+    res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
 
