@@ -1,3 +1,6 @@
+const User = require('../models/User'); 
+const Appointment = require('../models/Appointment');
+
 const getSuperAdminStats = async (req, res) => {
   try {
     // 1. Case-insensitive count (Role 'clinic', 'Clinic', etc. sab count honge)
