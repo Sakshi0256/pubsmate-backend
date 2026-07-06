@@ -273,6 +273,86 @@ if (role === 'doctor') {
   }
 };
 
+// // ── LOGIN ─────────────────────────────────────────────────────────────────────
+// const login = async (req, res) => {
+//   try {
+//     await connectDB();
+//     const { email, password, role } = req.body;
+
+//     if (!email || !password) {
+//       return res.status(400).json({
+//         success: false,
+//         message: 'Email and password are required',
+//       });
+//     }
+
+//     const user = await User.findOne({ email });
+//     if (!user) {
+//       return res.status(401).json({
+//         success: false,
+//         message: 'Invalid credentials',
+//       });
+//     }
+
+//     // ✅ Check if doctor is active
+//     if (user.role === 'doctor' && !user.isActive) {
+//       return res.status(403).json({
+//         success: false,
+//         message: 'Your account is inactive. Please contact clinic admin.',
+//       });
+//     }
+
+//     if (role && user.role !== role) {
+//       return res.status(403).json({
+//         success: false,
+//         message: `This account is registered as ${user.role}`,
+//       });
+//     }
+
+//     const isMatch = await bcrypt.compare(password, user.password);
+//     if (!isMatch) {
+//       return res.status(401).json({
+//         success: false,
+//         message: 'Invalid credentials',
+//       });
+//     }
+
+//     const token = generateToken(user);
+
+//     res.status(200).json({
+//       success: true,
+//       message: 'Login successful',
+//       token,
+//       user: {
+//         id: user._id,
+//         name: user.name,
+//         email: user.email,
+//         role: user.role,
+//         specialty: user.specialty,
+//         qualification: user.qualification,
+//         experience: user.experience,
+//         consultationFee: user.consultationFee,
+//         hospitalName: user.hospitalName,
+//         about: user.about,
+//         timing: user.timing,
+//         workingDays: user.workingDays,
+//         isActive: user.isActive,
+//       },
+//     });
+
+//   } catch (error) {
+//     console.log('Login error:', error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Server Error',
+//     });
+//   }
+// };
+
+
+// Top me file ke imports me Admin model zaroor add kar lena:
+// const Admin = require('../models/Admin'); 
+
 // ── LOGIN ─────────────────────────────────────────────────────────────────────
 const login = async (req, res) => {
   try {
@@ -286,7 +366,18 @@ const login = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email });
+    // 1. Pehle normal 'User' collection me dhoondho
+    let user = await User.findOne({ email });
+    let isSuperAdmin = false;
+
+    // 2. Agar User me nahi mila, toh 'Admin' collection me dhoondho
+    if (!user) {
+      user = await Admin.findOne({ email });
+      if (user) {
+        isSuperAdmin = true; // Mark kar diya ki ye superadmin hai
+      }
+    }
+
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -294,14 +385,15 @@ const login = async (req, res) => {
       });
     }
 
-    // ✅ Check if doctor is active
-    if (user.role === 'doctor' && !user.isActive) {
+    // ✅ Check if doctor is active (Skip for superadmin)
+    if (!isSuperAdmin && user.role === 'doctor' && !user.isActive) {
       return res.status(403).json({
         success: false,
         message: 'Your account is inactive. Please contact clinic admin.',
       });
     }
 
+    // ✅ Role validation
     if (role && user.role !== role) {
       return res.status(403).json({
         success: false,
@@ -309,6 +401,7 @@ const login = async (req, res) => {
       });
     }
 
+    // ✅ Password check
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({
@@ -319,25 +412,32 @@ const login = async (req, res) => {
 
     const token = generateToken(user);
 
+    // ✅ Build User Data object smartly (Superadmin ko baki fields nahi chahiye hote)
+    const userData = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
+
+    // Agar normal user (doctor/clinic) hai, toh baki fields bhi bhej do
+    if (!isSuperAdmin) {
+      userData.specialty = user.specialty;
+      userData.qualification = user.qualification;
+      userData.experience = user.experience;
+      userData.consultationFee = user.consultationFee;
+      userData.hospitalName = user.hospitalName;
+      userData.about = user.about;
+      userData.timing = user.timing;
+      userData.workingDays = user.workingDays;
+      userData.isActive = user.isActive;
+    }
+
     res.status(200).json({
       success: true,
       message: 'Login successful',
       token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        specialty: user.specialty,
-        qualification: user.qualification,
-        experience: user.experience,
-        consultationFee: user.consultationFee,
-        hospitalName: user.hospitalName,
-        about: user.about,
-        timing: user.timing,
-        workingDays: user.workingDays,
-        isActive: user.isActive,
-      },
+      user: userData,
     });
 
   } catch (error) {
