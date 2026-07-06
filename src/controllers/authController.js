@@ -450,6 +450,26 @@ const login = async (req, res) => {
   }
 };
 
+const getClinics = async (req, res) => {
+  try {
+    // User collection se saare clinics fetch karo aur naye wale upar dikhao
+    const clinics = await User.find({ role: 'clinic' })
+      .select('-password') // Password mat bhejna security ke liye
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: clinics,
+    });
+  } catch (error) {
+    console.log('Get clinics error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server Error fetching clinics',
+    });
+  }
+};
+
 // ── GET DOCTOR PROFILE ──────────────────────────────────────────────────────
 const getDoctorProfile = async (req, res) => {
   try {
@@ -489,4 +509,5 @@ module.exports = {
   signup,
   login,
   getDoctorProfile,
+  getClinics,
 };

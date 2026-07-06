@@ -2,7 +2,7 @@ const express = require('express');
 
 const router = express.Router();
 
-const { signup, login, getDoctorProfile } = require('../controllers/authController');
+const { signup, login, getDoctorProfile, getClinics } = require('../controllers/authController');
 const protect = require('../middleware/authMiddleware');
 const authorizeRoles = require('../middleware/roleMiddleware');
 
@@ -73,7 +73,7 @@ router.get(
 );
 
 router.post('/signup', signup);
-
+router.get('/clinics', getClinics);
 router.post('/login', login);
 
 module.exports = router;
