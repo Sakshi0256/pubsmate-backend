@@ -6,5 +6,6 @@ const { protect, authorizeRoles } = require('../middleware/auth');
 
 // Ab yahan 'router' kaam karega
 router.get('/stats', protect, authorizeRoles('superadmin'), getSuperAdminStats);
+// router.get('/stats', protect, getSuperAdminStats);
 
 module.exports = router;
