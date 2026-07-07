@@ -46,51 +46,39 @@ const getClinics = async (req, res) => {
 const getClinicById = async (req, res) => {
   try {
     const { id } = req.params;
-
-    // Find clinic
-    const clinic = await User.findById(id)
-      .select('-password')
-      .lean();
-
+    const clinic = await User.findById(id).select('-password').lean();
     if (!clinic || clinic.role.toLowerCase() !== 'clinic') {
       return res.status(404).json({ success: false, message: 'Clinic not found' });
     }
 
-    // 👇 IMPORTANT: If your doctor model has a `clinicId` field, use it.
-    // Otherwise, we'll count doctors by `hospitalName` (temporary solution).
-    // For accurate linking, add `clinicId` to the doctor model.
-    // For now, we'll use hospitalName as a fallback (works if clinic's name is unique).
-    const doctors = await User.find({ 
-      role: { $regex: /^doctor$/i },
-      // If you have a `clinicId` field, replace the line below with:
-      clinicId: id
-      // hospitalName: clinic.name  // fallback – assumes clinic name matches
-    }).select('_id');
+    // Get doctors belonging to this clinic
+    const doctors = await User.find({ role: 'doctor', clinicId: id })
+      .select('name email specialty consultationFee isActive');
 
     const doctorIds = doctors.map(d => d._id);
-    const totalDoctors = doctorIds.length;
 
-    // Count appointments that belong to these doctors
-    const totalAppointments = await Appointment.countDocuments({ 
-      doctor: { $in: doctorIds } 
-    });
+    // Get appointments for these doctors
+    const appointments = await Appointment.find({ doctor: { $in: doctorIds } })
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .populate('doctor', 'name')
+      .select('patientName doctorName slotDate slotTime status');
 
-    // Send response
     res.status(200).json({
       success: true,
       clinic: {
         ...clinic,
-        totalDoctors,
-        totalAppointments,
+        totalDoctors: doctors.length,
+        totalAppointments: await Appointment.countDocuments({ doctor: { $in: doctorIds } }),
+        doctors,
+        appointments,
       }
     });
-
   } catch (error) {
     console.error('Error fetching clinic details:', error);
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
-
 // ── Register a new clinic (Super Admin only) ──
 const registerClinicBySuperAdmin = async (req, res) => {
   try {
