@@ -7,13 +7,61 @@ const generateSlotsForDoctor = require('../utils/generateSlotsForDoctor');
 // ── GET ALL DOCTORS ──────────────────────────────────────────────────────────
 // controllers/doctorController.js - Updated getDoctors
 
+// const getDoctors = async (req, res) => {
+//   try {
+//     // If user is authenticated and role is clinic or doctor, filter by clinicId
+//     let query = { role: 'doctor', isActive: true };
+    
+//     if (req.user && (req.user.role === 'clinic' || req.user.role === 'doctor')) {
+//       const clinicId = req.user.userId || req.user._id;
+//       query.clinicId = clinicId;
+//     }
+
+//     const doctors = await User.find(
+//       query,
+//       'name email specialty qualification experience consultationFee hospitalName about timing workingDays isActive clinicId'
+//     );
+
+//     res.status(200).json({
+//       success: true,
+//       doctors: doctors || [],
+//     });
+//   } catch (error) {
+//     console.log(error);
+//     res.status(500).json({
+//       success: false,
+//       message: 'Server Error',
+//     });
+//   }
+// };
+
 const getDoctors = async (req, res) => {
   try {
-    // If user is authenticated and role is clinic or doctor, filter by clinicId
     let query = { role: 'doctor', isActive: true };
-    
-    if (req.user && (req.user.role === 'clinic' || req.user.role === 'doctor')) {
-      const clinicId = req.user.userId || req.user._id;
+    let clinicId = null;
+
+    // 1. Manually check for token (even though route is public)
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const userId = decoded.id || decoded.userId;
+        const user = await User.findById(userId).select('role clinicId');
+        if (user) {
+          if (user.role === 'clinic') {
+            clinicId = userId;                       // clinic admin's own ID
+          } else if (user.role === 'doctor') {
+            clinicId = user.clinicId;                // doctor's linked clinic
+          }
+        }
+      } catch (err) {
+        // token invalid – ignore and return all doctors
+      }
+    }
+
+    // 2. Apply clinic filter if we have a clinicId
+    if (clinicId) {
       query.clinicId = clinicId;
     }
 
@@ -22,18 +70,13 @@ const getDoctors = async (req, res) => {
       'name email specialty qualification experience consultationFee hospitalName about timing workingDays isActive clinicId'
     );
 
-    res.status(200).json({
-      success: true,
-      doctors: doctors || [],
-    });
+    res.status(200).json({ success: true, doctors: doctors || [] });
   } catch (error) {
     console.log(error);
-    res.status(500).json({
-      success: false,
-      message: 'Server Error',
-    });
+    res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
+
 
 // ── UPDATE DOCTOR STATUS (Clinic Admin) ────────────────────────────────────
 const updateDoctorStatus = async (req, res) => {
