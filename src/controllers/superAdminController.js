@@ -4,11 +4,26 @@ const Appointment = require('../models/Appointment');
 // ── Get Super Admin Dashboard Stats ──
 const getSuperAdminStats = async (req, res) => {
   try {
+    // ── Existing counts ──
     const totalClinics = await User.countDocuments({ role: { $regex: /^clinic$/i } });
     const totalDoctors = await User.countDocuments({ role: { $regex: /^doctor$/i } });
     const totalPatients = await User.countDocuments({ role: { $regex: /^patient$/i } });
     const totalAppointments = await Appointment.countDocuments();
 
+    // ── NEW: Appointment status breakdown (for pie chart) ──
+    const appointmentStatus = await Appointment.aggregate([
+      { $group: { _id: '$status', count: { $sum: 1 } } },
+      { $project: { name: '$_id', value: '$count', _id: 0 } }
+    ]);
+
+    // ── NEW: User distribution (for pie chart) ──
+    const userDistribution = [
+      { name: 'Clinics', value: totalClinics },
+      { name: 'Doctors', value: totalDoctors },
+      { name: 'Patients', value: totalPatients },
+    ];
+
+    // ── Recent clinics ──
     const recentClinics = await User.find({ role: { $regex: /^clinic$/i } })
       .sort({ createdAt: -1 })
       .limit(5)
@@ -17,7 +32,9 @@ const getSuperAdminStats = async (req, res) => {
     res.status(200).json({
       success: true,
       stats: { totalClinics, totalDoctors, totalPatients, totalAppointments },
-      recentClinics
+      recentClinics,
+      appointmentStatus,   // ✅ New
+      userDistribution,    // ✅ New
     });
   } catch (error) {
     console.log("Stats Error:", error);
