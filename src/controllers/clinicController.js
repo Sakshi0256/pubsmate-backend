@@ -234,6 +234,20 @@ const getClinicProfile = async (req, res) => {
   }
 };
 
+const getClinicDoctors = async (req, res) => {
+  try {
+    const clinicId = req.user.userId;
+    const doctors = await User.find(
+      { role: 'doctor', clinicId: clinicId, isActive: true },
+      'name email specialty qualification experience consultationFee hospitalName about timing workingDays isActive clinicId'
+    );
+    res.status(200).json({ success: true, doctors });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+
 // ── UPDATE CLINIC PROFILE ──────────────────────────────────────────────────
 const updateClinicProfile = async (req, res) => {
   try {
@@ -265,4 +279,5 @@ module.exports = {
   getClinicProfile,
   updateClinicProfile,
   addDoctorByClinic,
+  getClinicDoctors,
 };

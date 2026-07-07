@@ -9,11 +9,14 @@ const {
   getClinicProfile,
   updateClinicProfile,
   addDoctorByClinic,
+  getClinicDoctors,
 } = require('../controllers/clinicController');
+// const { getClinicDoctors } = require('../controllers/clinicController');
 
 
 // ── All routes require authentication ──
 // router.use(protect); // ← Ye sab routes pe protect laga dega
+router.get('/doctors', protect, authorizeRoles('clinic'), getClinicDoctors);
 
 // ── Profile Routes (with auth) ──
 router.get('/profile', protect, authorizeRoles('clinic'), getClinicProfile);
