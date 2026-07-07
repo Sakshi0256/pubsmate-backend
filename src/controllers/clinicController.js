@@ -1,6 +1,72 @@
 const Appointment = require('../models/Appointment');
 const Slot = require('../models/Slot');
-const User = require('../models/User'); 
+const bcrypt = require('bcryptjs');
+const User = require('../models/User');
+
+// ── Clinic admin adds a doctor (protected) ──
+const addDoctorByClinic = async (req, res) => {
+  try {
+    const {
+      name,
+      email,
+      password,
+      specialty,
+      qualification,
+      experience,
+      consultationFee,
+      hospitalName,
+      about,
+      timing,
+      workingDays,
+    } = req.body;
+
+    // 1. Check if doctor already exists
+    const existing = await User.findOne({ email });
+    if (existing) {
+      return res.status(400).json({ success: false, message: 'Email already registered' });
+    }
+
+    // 2. Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // 3. Create doctor with clinicId from logged-in clinic admin
+    const doctorData = {
+      name,
+      email,
+      password: hashedPassword,
+      role: 'doctor',
+      specialty: specialty || '',
+      qualification: qualification || '',
+      experience: experience || '',
+      consultationFee: consultationFee || 0,
+      hospitalName: hospitalName || '',
+      about: about || '',
+      clinicId: req.user.userId, // 🔥 The key fix!
+      isActive: true,
+      timing: timing || {
+        morning: { start: '09:00', end: '12:00', enabled: true },
+        evening: { start: '16:00', end: '20:00', enabled: true },
+        slotDuration: 15,
+        break: { start: '13:00', end: '14:00', enabled: true }
+      },
+      workingDays: workingDays || [1, 2, 3, 4, 5, 6],
+      maxAppointmentsPerDay: 20,
+    };
+
+    const doctor = await User.create(doctorData);
+
+    // (Optional) Generate slots – but cron job will handle it.
+
+    res.status(201).json({
+      success: true,
+      message: 'Doctor added successfully',
+      doctor,
+    });
+  } catch (error) {
+    console.error('Error adding doctor by clinic:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
 
 // ── GET DASHBOARD STATS ─────────────────────────────────────────────────────
 const getDashboardStats = async (req, res) => {
@@ -198,4 +264,5 @@ module.exports = {
   createAppointment,
   getClinicProfile,
   updateClinicProfile,
+  addDoctorByClinic,
 };

@@ -8,7 +8,9 @@ const {
   createAppointment,
   getClinicProfile,
   updateClinicProfile,
+  addDoctorByClinic,
 } = require('../controllers/clinicController');
+
 
 // ── All routes require authentication ──
 // router.use(protect); // ← Ye sab routes pe protect laga dega
@@ -23,5 +25,8 @@ router.get('/dashboard', protect, authorizeRoles('clinic'), getDashboardStats);
 // ── Appointments ──
 router.get('/appointments', protect, authorizeRoles('clinic'), getAllAppointments);
 router.post('/appointments', protect, authorizeRoles('clinic'), createAppointment);
+// routes/clinicRoutes.js
+router.post('/doctors', protect, authorizeRoles('clinic'), addDoctorByClinic);
+
 
 module.exports = router;
