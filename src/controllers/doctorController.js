@@ -117,16 +117,34 @@ const getDoctorSlots = async (req, res) => {
       doctor: new mongoose.Types.ObjectId(doctorId),
     };
 
-    if (date) {
-      query.slotDate = date;
-    }
+    if (date) query.slotDate = date;
+    if (status && status !== 'all') query.status = status;
 
-    if (status && status !== 'all') {
-      query.status = status;
-    }
+    let slots = await Slot.find(query).sort({ slotDate: 1, slotTime: 1 });
 
-    const slots = await Slot.find(query)
-      .sort({ slotDate: 1, slotTime: 1 });
+    // 🧹 Filter past slots (if no specific date requested)
+    if (!date) {
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+      const currentHour = now.getHours();
+      const currentMinute = now.getMinutes();
+
+      slots = slots.filter(slot => {
+        if (slot.slotDate > todayStr) return true;
+        if (slot.slotDate < todayStr) return false;
+
+        const timeParts = slot.slotTime.match(/(\d+):(\d+)\s*([AP]M)/i);
+        if (!timeParts) return true;
+        let hour = parseInt(timeParts[1]);
+        const minute = parseInt(timeParts[2]);
+        const ampm = timeParts[3].toUpperCase();
+        if (ampm === 'PM' && hour !== 12) hour += 12;
+        if (ampm === 'AM' && hour === 12) hour = 0;
+        const slotMinutes = hour * 60 + minute;
+        const currentMinutes = currentHour * 60 + currentMinute;
+        return slotMinutes > currentMinutes;
+      });
+    }
 
     res.status(200).json({
       success: true,
