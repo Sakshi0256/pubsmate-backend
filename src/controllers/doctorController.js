@@ -9,24 +9,23 @@ const generateSlotsForDoctor = require('../utils/generateSlotsForDoctor');
 
 const getDoctors = async (req, res) => {
   try {
-    // 🪄 MAGIC FILTER: Login clinic ki ID nikalo
-    const clinicId = req.user.userId || req.user._id;
+    // If user is authenticated and role is clinic or doctor, filter by clinicId
+    let query = { role: 'doctor', isActive: true };
+    
+    if (req.user && (req.user.role === 'clinic' || req.user.role === 'doctor')) {
+      const clinicId = req.user.userId || req.user._id;
+      query.clinicId = clinicId;
+    }
 
-    // Sirf wahi doctors lao jinka clinicId ye hai
     const doctors = await User.find(
-      { 
-        role: 'doctor',
-        isActive: true,
-        clinicId: clinicId // ✅ YEH RAHA FILTER
-      },
-      'name email specialty qualification experience consultationFee hospitalName about timing workingDays isActive'
+      query,
+      'name email specialty qualification experience consultationFee hospitalName about timing workingDays isActive clinicId'
     );
 
     res.status(200).json({
       success: true,
       doctors: doctors || [],
     });
-
   } catch (error) {
     console.log(error);
     res.status(500).json({
