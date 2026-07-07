@@ -258,7 +258,7 @@ if (role === 'doctor') {
         qualification: user.qualification,
         experience: user.experience,
         consultationFee: user.consultationFee,
-        hospitalName: user.hospitalName,
+        clinicId: req.user.userId || req.user._id,
         about: user.about,
         timing: user.timing,
         workingDays: user.workingDays,

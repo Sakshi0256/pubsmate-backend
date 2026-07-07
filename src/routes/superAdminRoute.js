@@ -1,11 +1,23 @@
-const express = require('express'); // 1. Express import kar
-const router = express.Router();    // 2. Router initialize kar
-
-const { getSuperAdminStats } = require('../controllers/superAdminController');
+const express = require('express');
+const router = express.Router();
 const { protect, authorizeRoles } = require('../middleware/auth');
+const {
+  getSuperAdminStats,
+  getClinics,
+  getClinicById,
+  registerClinicBySuperAdmin,
+} = require('../controllers/superAdminController');
 
-// Ab yahan 'router' kaam karega
-router.get('/stats', protect, authorizeRoles('superadmin'), getSuperAdminStats);
-// router.get('/stats', protect, getSuperAdminStats);
+// All routes require authentication and superadmin role
+router.use(protect);
+router.use(authorizeRoles('superadmin'));
+
+// Dashboard stats
+router.get('/stats', getSuperAdminStats);
+
+// Clinic Management
+router.get('/clinics', getClinics);
+router.get('/clinics/:id', getClinicById);
+router.post('/clinics', registerClinicBySuperAdmin);
 
 module.exports = router;

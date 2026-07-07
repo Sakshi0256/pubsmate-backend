@@ -128,7 +128,7 @@ const userSchema = new mongoose.Schema(
     clinicId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true
+      // required: true
     },
     // Buffer time between appointments (minutes)
     bufferTime: {
