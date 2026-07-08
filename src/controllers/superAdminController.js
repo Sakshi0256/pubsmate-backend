@@ -42,38 +42,6 @@ const getSuperAdminStats = async (req, res) => {
   }
 };
 
-
-const toggleClinicStatus = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { isActive } = req.body; // expecting boolean
-
-    const clinic = await User.findById(id);
-    if (!clinic || clinic.role !== 'clinic') {
-      return res.status(404).json({ success: false, message: 'Clinic not found' });
-    }
-
-    // Update clinic status
-    clinic.isActive = isActive;
-    await clinic.save();
-
-    // Update all doctors belonging to this clinic
-    await User.updateMany(
-      { role: 'doctor', clinicId: id },
-      { $set: { isActive: isActive } }
-    );
-
-    res.status(200).json({
-      success: true,
-      message: `Clinic ${isActive ? 'activated' : 'deactivated'} and all its doctors updated.`,
-      clinic,
-    });
-  } catch (error) {
-    console.error('Error toggling clinic status:', error);
-    res.status(500).json({ success: false, message: 'Server Error' });
-  }
-};
-
 // ── Get All Clinics ──
 const getClinics = async (req, res) => {
   try {
@@ -173,6 +141,39 @@ const registerClinicBySuperAdmin = async (req, res) => {
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
+
+
+const toggleClinicStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body; // expecting boolean
+
+    const clinic = await User.findById(id);
+    if (!clinic || clinic.role !== 'clinic') {
+      return res.status(404).json({ success: false, message: 'Clinic not found' });
+    }
+
+    // Update clinic status
+    clinic.isActive = isActive;
+    await clinic.save();
+
+    // Update all doctors belonging to this clinic
+    await User.updateMany(
+      { role: 'doctor', clinicId: id },
+      { $set: { isActive: isActive } }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Clinic ${isActive ? 'activated' : 'deactivated'} and all its doctors updated.`,
+      clinic,
+    });
+  } catch (error) {
+    console.error('Error toggling clinic status:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
 
 module.exports = {
   getSuperAdminStats,
