@@ -6,8 +6,10 @@ const {
   getClinics,
   getClinicById,
   registerClinicBySuperAdmin,
+    toggleClinicStatus,
 } = require('../controllers/superAdminController');
 
+router.patch('/clinics/:id/status', protect, authorizeRoles('superadmin'), toggleClinicStatus);
 // All routes require authentication and superadmin role
 router.use(protect);
 router.use(authorizeRoles('superadmin'));
