@@ -205,7 +205,9 @@ const getDoctorSlots = async (req, res) => {
 // ── ✅ FIX: GENERATE SLOTS FOR DOCTOR (max 3 days) ──
 const generateSlots = async (req, res) => {
   try {
-    const { doctorId, days = 1 } = req.body; // ✅ Default 1 day
+    const { doctorId } = req.body;
+
+const maxDays = 20;
     const actualDoctorId = doctorId || req.user.userId;
 
     // Check if doctor exists
@@ -218,11 +220,11 @@ const generateSlots = async (req, res) => {
     }
 
     // ✅ Maximum 3 days generate karo
-    const maxDays = Math.min(days, 3);
+    // const maxDays = Math.min(days, 3);
     const today = new Date();
     const results = [];
 
-    for (let i = 1; i <= maxDays; i++) {
+   for (let i = 0; i < maxDays; i++) {
       const date = new Date(today);
       date.setDate(date.getDate() + i);
       const slotDate = date.toISOString().split('T')[0];

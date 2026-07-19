@@ -1,34 +1,51 @@
-// utils/generateSlotsForDoctor.js
 const Slot = require('../models/Slot');
 const User = require('../models/User');
 
-const generateTimeSlots = (startTime, endTime, slotDuration, breakStart, breakEnd, date, shift) => {
+const TOTAL_DAYS = 20;
+
+const generateTimeSlots = (
+  startTime,
+  endTime,
+  slotDuration,
+  breakStart,
+  breakEnd,
+  date,
+  shift
+) => {
   const slots = [];
+
   const start = new Date(`${date}T${startTime}:00`);
   const end = new Date(`${date}T${endTime}:00`);
-  const breakStartTime = breakStart ? new Date(`${date}T${breakStart}:00`) : null;
-  const breakEndTime = breakEnd ? new Date(`${date}T${breakEnd}:00`) : null;
+
+  const breakStartTime = breakStart
+    ? new Date(`${date}T${breakStart}:00`)
+    : null;
+
+  const breakEndTime = breakEnd
+    ? new Date(`${date}T${breakEnd}:00`)
+    : null;
+
   const duration = slotDuration || 15;
 
   let current = new Date(start);
 
   while (current < end) {
-    // Check break time
-    if (breakStartTime && breakEndTime) {
-      if (current >= breakStartTime && current < breakEndTime) {
-        current = new Date(breakEndTime);
-        continue;
-      }
+    if (
+      breakStartTime &&
+      breakEndTime &&
+      current >= breakStartTime &&
+      current < breakEndTime
+    ) {
+      current = new Date(breakEndTime);
+      continue;
     }
 
-    const slotTime = current.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    });
-
     slots.push({
-      slotTime,
+      slotTime: current.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      }),
       shift,
     });
 
@@ -38,120 +55,150 @@ const generateTimeSlots = (startTime, endTime, slotDuration, breakStart, breakEn
   return slots;
 };
 
-const generateSlotsForDoctor = async (doctorId, slotDate) => {
-  try {
-    // Get doctor with timing info
-    const doctor = await User.findById(doctorId);
-    if (!doctor) {
-      throw new Error('Doctor not found');
-    }
+const generateSlotsForDoctor = async (doctorId, startDate) => {
+  const doctor = await User.findById(doctorId);
 
-    // Check if doctor is active
-    if (!doctor.isActive) {
-      return { created: 0, message: 'Doctor is inactive' };
-    }
+  if (!doctor) {
+    throw new Error('Doctor not found');
+  }
 
-    // Check if slots already exist for this date
-    const existingSlots = await Slot.find({
+  if (!doctor.isActive) {
+    return {
+      created: 0,
+      skipped: true,
+    };
+  }
+
+  const timing = doctor.timing || {
+    morning: {
+      start: '09:00',
+      end: '12:00',
+      enabled: true,
+    },
+    evening: {
+      start: '16:00',
+      end: '20:00',
+      enabled: true,
+    },
+    slotDuration: 15,
+    break: {
+      start: '13:00',
+      end: '14:00',
+      enabled: true,
+    },
+  };
+
+  let totalCreated = 0;
+
+  for (let day = 0; day < TOTAL_DAYS; day++) {
+
+    const dateObj = new Date(startDate);
+    dateObj.setDate(dateObj.getDate() + day);
+
+    const slotDate = dateObj.toISOString().split('T')[0];
+
+    const exists = await Slot.exists({
       doctor: doctorId,
-      slotDate: slotDate,
+      slotDate,
     });
 
-    if (existingSlots.length > 0) {
-      return {
-        created: 0,
-        skipped: true,
-        message: `Slots already exist for ${slotDate}`,
-      };
+    if (exists) {
+      continue;
     }
 
-    const timing = doctor.timing || {
-      morning: { start: '09:00', end: '12:00', enabled: true },
-      evening: { start: '16:00', end: '20:00', enabled: true },
-      slotDuration: 15,
-      break: { start: '13:00', end: '14:00', enabled: true },
-    };
+    let allSlots = [];
 
-    const allSlots = [];
-    const today = new Date().toISOString().split('T')[0];
-    const isToday = slotDate === today;
-    const currentTime = new Date();
-
-    // Generate morning slots
     if (timing.morning.enabled) {
-      const morningSlots = generateTimeSlots(
-        timing.morning.start,
-        timing.morning.end,
-        timing.slotDuration,
-        timing.break.enabled ? timing.break.start : null,
-        timing.break.enabled ? timing.break.end : null,
-        slotDate,
-        'morning'
+      allSlots.push(
+        ...generateTimeSlots(
+          timing.morning.start,
+          timing.morning.end,
+          timing.slotDuration,
+          timing.break.enabled ? timing.break.start : null,
+          timing.break.enabled ? timing.break.end : null,
+          slotDate,
+          'morning'
+        )
       );
-      allSlots.push(...morningSlots);
     }
 
-    // Generate evening slots
     if (timing.evening.enabled) {
-      const eveningSlots = generateTimeSlots(
-        timing.evening.start,
-        timing.evening.end,
-        timing.slotDuration,
-        timing.break.enabled ? timing.break.start : null,
-        timing.break.enabled ? timing.break.end : null,
-        slotDate,
-        'evening'
+      allSlots.push(
+        ...generateTimeSlots(
+          timing.evening.start,
+          timing.evening.end,
+          timing.slotDuration,
+          timing.break.enabled ? timing.break.start : null,
+          timing.break.enabled ? timing.break.end : null,
+          slotDate,
+          'evening'
+        )
       );
-      allSlots.push(...eveningSlots);
     }
 
-    // Filter slots for today (only future slots)
-    const slotsToCreate = [];
-    for (const slot of allSlots) {
-      if (isToday) {
-        const slotTime = new Date(`${slotDate}T${slot.slotTime}`);
-        // Convert to 24-hour for comparison
-        const slotHour = parseInt(slot.slotTime.split(':')[0]);
-        const slotMinute = parseInt(slot.slotTime.split(':')[1].split(' ')[0]);
-        const isPM = slot.slotTime.includes('PM');
-        const slotDateObj = new Date();
-        slotDateObj.setHours(isPM ? slotHour + 12 : slotHour, slotMinute, 0);
+    // Skip past time slots for today only
+    const now = new Date();
 
-        // Skip past slots
-        if (slotDateObj <= currentTime) {
-          continue;
-        }
+    let slotsToCreate = allSlots.filter(slot => {
+
+      if (slotDate !== now.toISOString().split('T')[0]) {
+        return true;
       }
 
-      slotsToCreate.push({
-        doctor: doctorId,
-        slotDate: slotDate,
-        slotTime: slot.slotTime,
-        status: 'available',
-        shift: slot.shift,
-        isAutoGenerated: true,
-      });
+      const match = slot.slotTime.match(/(\d+):(\d+)\s*([AP]M)/i);
+
+      if (!match) return true;
+
+      let hour = parseInt(match[1]);
+
+      const minute = parseInt(match[2]);
+
+      const ampm = match[3].toUpperCase();
+
+      if (ampm === 'PM' && hour !== 12) hour += 12;
+
+      if (ampm === 'AM' && hour === 12) hour = 0;
+
+      const slotMinutes = hour * 60 + minute;
+
+      const currentMinutes =
+        now.getHours() * 60 + now.getMinutes();
+
+      return slotMinutes > currentMinutes;
+
+    });
+
+    if (
+      doctor.maxAppointmentsPerDay &&
+      slotsToCreate.length > doctor.maxAppointmentsPerDay
+    ) {
+      slotsToCreate = slotsToCreate.slice(
+        0,
+        doctor.maxAppointmentsPerDay
+      );
     }
 
-    // Check max appointments per day limit
-    if (slotsToCreate.length > doctor.maxAppointmentsPerDay) {
-      // Only take first N slots
-      slotsToCreate.length = doctor.maxAppointmentsPerDay;
-    }
+    if (slotsToCreate.length) {
 
-    if (slotsToCreate.length > 0) {
-      await Slot.insertMany(slotsToCreate);
-    }
+      await Slot.insertMany(
+        slotsToCreate.map(slot => ({
+          doctor: doctorId,
+          slotDate,
+          slotTime: slot.slotTime,
+          shift: slot.shift,
+          status: 'available',
+          isAutoGenerated: true,
+        }))
+      );
 
-    return {
-      created: slotsToCreate.length,
-      skipped: false,
-      message: `${slotsToCreate.length} slots created for ${slotDate}`,
-    };
-  } catch (error) {
-    console.error('Error generating slots:', error);
-    throw error;
+      totalCreated += slotsToCreate.length;
+    }
   }
+
+  return {
+    created: totalCreated,
+    skipped: false,
+  };
 };
 
 module.exports = generateSlotsForDoctor;

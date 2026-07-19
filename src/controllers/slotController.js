@@ -112,20 +112,32 @@ const getDoctorSlots = async (req, res) => {
 
 const generateSlots = async (req, res) => {
   try {
-    const { doctor, slotDate } = req.body;
-    const result = await generateSlotsForDoctor(doctor, slotDate);
+    const { doctor } = req.body;
 
-    if (result.skipped) {
-      return res.status(400).json({ success: false, message: 'Slots already generated' });
+    const today = new Date().toISOString().split('T')[0];
+
+    const result = await generateSlotsForDoctor(doctor, today);
+
+    if (result.created === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No new slots generated'
+      });
     }
 
-    res.status(201).json({ success: true, message: `${result.created} slots created` });
+    res.status(201).json({
+      success: true,
+      message: `${result.created} slots created`
+    });
+
   } catch (error) {
     console.log(error);
-    res.status(500).json({ success: false, message: 'Server Error' });
+    res.status(500).json({
+      success: false,
+      message: 'Server Error'
+    });
   }
 };
-
 
 const toggleSlotStatus = async (
   req,
