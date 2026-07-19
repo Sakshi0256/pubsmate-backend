@@ -39,18 +39,18 @@ app.get('/', (req, res) => {
 });
 
 // ── Test DB route ──
-app.get('/api/v1/test-db', async (req, res) => {
+app.get("/api/v1/test-db", async (req, res) => {
   try {
-    const mongoose = require('mongoose');
-    const state = mongoose.connection.readyState;
-    const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
+    await connectDB();
+
     res.json({
-      state,
-      message: state === 1 ? 'Connected ✅' : 'Not connected ❌',
-      uri: uri ? 'Set ✅' : 'Not Set ❌',
+      state: mongoose.connection.readyState,
+      connected: mongoose.connection.readyState === 1,
     });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (e) {
+    res.status(500).json({
+      error: e.message,
+    });
   }
 });
 
