@@ -64,11 +64,50 @@ const getSlots = async (req, res) => {
 };
 
 const getDoctorSlots = async (req, res) => {
-  return res.status(200).json({
-    success: true,
-    version: "SAKSHI_TEST_V3",
-    doctorId: req.params.doctorId,
-  });
+  try {
+    const { doctorId } = req.params;
+
+    // STEP 1
+    const count = await Slot.countDocuments({
+      doctor: doctorId,
+      status: "available",
+    });
+
+    // STEP 2
+    const slots = await Slot.find({
+      doctor: doctorId,
+      status: "available",
+    });
+
+    // STEP 3
+    let populated;
+    try {
+      populated = await Slot.find({
+        doctor: doctorId,
+        status: "available",
+      }).populate("doctor", "name email");
+    } catch (e) {
+      return res.json({
+        step: "populate",
+        error: e.message,
+        name: e.name,
+      });
+    }
+
+    return res.json({
+      success: true,
+      count,
+      slotsFound: slots.length,
+      populatedFound: populated.length,
+    });
+
+  } catch (e) {
+    return res.status(500).json({
+      step: "find",
+      error: e.message,
+      name: e.name,
+    });
+  }
 };
 
 // const getDoctorSlots = async (req, res) => {
