@@ -65,47 +65,28 @@ const getSlots = async (req, res) => {
 
 const getDoctorSlots = async (req, res) => {
   try {
-    const { doctorId } = req.params;
+    const doctorId = req.params.doctorId;
 
-    // STEP 1
-    const count = await Slot.countDocuments({
-      doctor: doctorId,
-      status: "available",
-    });
+    console.log("doctorId =", JSON.stringify(doctorId));
+    console.log("length =", doctorId.length);
+    console.log("valid =", mongoose.Types.ObjectId.isValid(doctorId));
 
-    // STEP 2
     const slots = await Slot.find({
       doctor: doctorId,
       status: "available",
     });
 
-    // STEP 3
-    let populated;
-    try {
-      populated = await Slot.find({
-        doctor: doctorId,
-        status: "available",
-      }).populate("doctor", "name email");
-    } catch (e) {
-      return res.json({
-        step: "populate",
-        error: e.message,
-        name: e.name,
-      });
-    }
-
     return res.json({
       success: true,
-      count,
-      slotsFound: slots.length,
-      populatedFound: populated.length,
+      total: slots.length,
     });
+  } catch (err) {
+    console.error(err);
 
-  } catch (e) {
     return res.status(500).json({
-      step: "find",
-      error: e.message,
-      name: e.name,
+      success: false,
+      error: err.message,
+      stack: err.stack,
     });
   }
 };
