@@ -73,8 +73,7 @@ const getDoctorSlots = async (req, res) => {
     })
       .populate('doctor', 'name email')
       .sort({ slotDate: 1, slotTime: 1 });
-   console.log("API Response:", response.data);
-console.log("Total Slots:", response.data.slots?.length);
+  
     // 🧹 Filter out past slots (today's past time slots)
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
