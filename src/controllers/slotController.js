@@ -39,11 +39,16 @@ const getSlots = async (req, res) => {
     const slots = await Slot.find({
       doctor: req.user.userId,
     })
+
       .populate('doctor', 'name email')
       .sort({
         slotDate: 1,
         slotTime: 1,
       });
+
+    console.log("API Response:", response.data);
+    console.log("Total Slots:", response.data.slots?.length);
+
 
     res.status(200).json({
       success: true,
@@ -70,9 +75,10 @@ const getDoctorSlots = async (req, res) => {
       doctor: doctorId,
       status: 'available',
     })
-    .populate('doctor', 'name email')
-    .sort({ slotDate: 1, slotTime: 1 });
-
+      .populate('doctor', 'name email')
+      .sort({ slotDate: 1, slotTime: 1 });
+   console.log("API Response:", response.data);
+console.log("Total Slots:", response.data.slots?.length);
     // 🧹 Filter out past slots (today's past time slots)
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
@@ -197,10 +203,10 @@ const getAllSlots = async (req, res) => {
     const slots = await Slot.find({
       status: 'available',
     })
-    .populate(
-      'doctor',
-      'name email'
-    );
+      .populate(
+        'doctor',
+        'name email'
+      );
 
     res.status(200).json({
       success: true,
@@ -221,9 +227,9 @@ const getAllSlots = async (req, res) => {
 
 module.exports = {
   getSlots,
-    createSlot,
-    generateSlots,
-    toggleSlotStatus,
-    getAllSlots,
-    getDoctorSlots,
+  createSlot,
+  generateSlots,
+  toggleSlotStatus,
+  getAllSlots,
+  getDoctorSlots,
 };

@@ -218,6 +218,7 @@ const maxDays = 20;
         message: 'Doctor not found',
       });
     }
+    
 
     // ✅ Maximum 3 days generate karo
     // const maxDays = Math.min(days, 3);
