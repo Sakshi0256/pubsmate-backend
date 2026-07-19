@@ -154,54 +154,31 @@ const getDoctorById = async (req, res) => {
 const getDoctorSlots = async (req, res) => {
   try {
     const { doctorId } = req.params;
-    const { date, status = 'available' } = req.query;
 
-    const query = {
-      doctor: new mongoose.Types.ObjectId(doctorId),
-    };
+    console.log("Doctor ID:", doctorId);
 
-    if (date) query.slotDate = date;
-    if (status && status !== 'all') query.status = status;
+    const slots = await Slot.find({
+      doctor: doctorId,
+      status: "available",
+    })
+      .populate("doctor", "name email")
+      .sort({ slotDate: 1, slotTime: 1 });
 
-    let slots = await Slot.find(query).sort({ slotDate: 1, slotTime: 1 });
-
-    // 🧹 Filter past slots (if no specific date requested)
-    if (!date) {
-      const now = new Date();
-      const todayStr = now.toISOString().split('T')[0];
-      const currentHour = now.getHours();
-      const currentMinute = now.getMinutes();
-
-      slots = slots.filter(slot => {
-        if (slot.slotDate > todayStr) return true;
-        if (slot.slotDate < todayStr) return false;
-
-        const timeParts = slot.slotTime.match(/(\d+):(\d+)\s*([AP]M)/i);
-        if (!timeParts) return true;
-        let hour = parseInt(timeParts[1]);
-        const minute = parseInt(timeParts[2]);
-        const ampm = timeParts[3].toUpperCase();
-        if (ampm === 'PM' && hour !== 12) hour += 12;
-        if (ampm === 'AM' && hour === 12) hour = 0;
-        const slotMinutes = hour * 60 + minute;
-        const currentMinutes = currentHour * 60 + currentMinute;
-        return slotMinutes > currentMinutes;
-      });
-    }
-
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       slots,
     });
+
   } catch (error) {
-    console.log(error);
-    res.status(500).json({
+    console.error("getDoctorSlots ERROR:", error);
+
+    return res.status(500).json({
       success: false,
-      message: 'Server Error',
+      error: error.message,
+      name: error.name,
     });
   }
 };
-
 // ── ✅ FIX: GENERATE SLOTS FOR DOCTOR (max 3 days) ──
 const generateSlots = async (req, res) => {
   try {
