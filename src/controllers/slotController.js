@@ -46,10 +46,6 @@ const getSlots = async (req, res) => {
         slotTime: 1,
       });
 
-    console.log("API Response:", response.data);
-    console.log("Total Slots:", response.data.slots?.length);
-
-
     res.status(200).json({
       success: true,
       slots,
